@@ -25,13 +25,61 @@ let userSchema = new mongoose.Schema({
 let Session = mongoose.model('Session', excerciseSessionSchema)
 let user = mongoose.model('user', userSchema)
 
-app.post('/api/users',bodyParser.urlencoded({ extended: false }), function ( req, res ){
-  res.json({})
+app.post('/api/users', bodyParser.urlencoded({ extended: false }), function ( req, res ){
+  res.json({
+    username: req.body.username
+  })
+
+  //work on the Mongodb part
+  let newUser = new user({username: req.body.username})
+  newUser.save((error,savedUser) => {
+    if (!error){
+      let reqObject ={}
+        resObject['username'] = savedUser.username
+        resObject['id'] = savedUser.id
+        res.json(resObject)
+    }
+  })
   console.log(req.body)
 } )
 
+app.post('/api/users/add',bodyParser.urlencoded({ extended: false }), function ( req, res ){
+  let newSession  = new Session({
+    description: req.body.description,
+    duration: parseInt(req.body.duration),
+    date: req.body.date
+  })
+  if (newSession.date === ''){
+    newSession.date = new Date().toISOString().substring(0, 10)
+  }
+  user.findByIdAndUpdate(
+    req.body.userId,
+    {$push:{log: new Session}},
+    {new: true},
+    (error, updatedUser) => {
+      let resObject = {}
+      resObject['id'] = updatedUser.id
+      resObject['username'] = updatedUser.username
+      resObject['date'] = new Date(newSession.date).toUTCString()
+      resObject['description'] = newSession.description
+      resObject['duration'] = newSession.duration
+      res.json(resObject);
+    }
+  )
+} )
 
+app.get('/api/excercise/log', function (req, res ) {
+  console.log(req.query)
+  user.findById(req.query.userId, (error, result) => {
+    if (!error){
+      let resObject = result
+      resObject['count'] = result.log.length
+      res.json(resObject)
 
+    }
+  })
+  res.json({})
+})
 
 
 
